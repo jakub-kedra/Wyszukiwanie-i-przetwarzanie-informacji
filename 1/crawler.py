@@ -7,7 +7,16 @@
 import urllib.request as req
 import sys
 import os
+from html.parser import HTMLParser
 
+#-------------------------------------------------------------------------
+class Parser(HTMLParser):
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.output_list = []
+    def handle_starttag(self, tag, attrs):
+        if tag == 'a':
+            self.output_list.append(dict(attrs).get('href'))
       
 #-------------------------------------------------------------------------
 ### generatePolicy classes
@@ -76,6 +85,7 @@ def main():
     # Inject: parse seed links into the base of maintained URLs
     inject(c)
     
+   
     # Iterate...
     for iteration in range(c.iterations):
     
@@ -101,6 +111,7 @@ def main():
             
         # Parse file
         htmlData, retrievedURLs = parse(c, page, iteration)
+
         
         # Store pages
         if c.storePages:
@@ -196,6 +207,9 @@ def parse(c, page, iteration):
     # data to be saved (DONE)
     htmlData = page.read()
     # obtained URLs (TODO)
+    p=Parser()
+    p.feed(str(htmlData))
+    p.output_list
     retrievedURLs = set([])
     if c.debug:
         print("   Extracted " + str(len(retrievedURLs)) + " links")
@@ -210,7 +224,7 @@ def getNormalisedURLs(retrievedURLs):
 #-------------------------------------------------------------------------  
 # Remove duplicates (duplicates) (TODO)
 def removeDuplicates(c, retrievedURLs):
-    # TODO
+    
     return retrievedURLs
 
 #-------------------------------------------------------------------------  
