@@ -31,15 +31,25 @@ class Dummy_Policy:
     def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
         pass
         
-class LIFO_Policy:
+class LIFOPolicy:
+    def __init__(self, c):
+        # Queue list containing URLs
+        self.queue = c.seedURLs.copy()
+        
     def getURL(self, c, iteration):
-        if len(c.URLs) == 0:
+        if len(self.queue) == 0:
             return None
         else:
-            return c.seedURLs[0]
-            
+            # Return the last element of the queue (LIFO)
+            return self.queue.pop()
+    
     def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
-        pass
+        # Copy elements of retrievedURLs set into a temporary list
+        tmpList = list(retrievedURLs)
+        # Sort the temporary list in lexicographical order of file names
+        tmpList.sort(key=lambda url: url[len(url) - url[::-1].index('/') :])
+        # Add URLs from the temporary list to the end of the queue
+        self.queue.extend(tmpList)
     
 #-------------------------------------------------------------------------
 # Data container
@@ -61,7 +71,7 @@ class Container:
          # Incoming URLs (to <- from; set of incoming links)
         self.incomingURLs = {}
         # Class which maintains a queue of urls to visit. 
-        self.generatePolicy = Dummy_Policy()
+        self.generatePolicy = LIFOPolicy(self)
         # Page (URL) to be fetched next
         self.toFetch = None
         # Number of iterations of a crawler. 
