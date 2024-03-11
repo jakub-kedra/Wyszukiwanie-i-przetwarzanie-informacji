@@ -8,10 +8,17 @@ import urllib.request as req
 import sys
 import os
 
+from html.parser import HTMLParser
       
 #-------------------------------------------------------------------------
 ### generatePolicy classes
-  
+class Parser(HTMLParser):
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.output_list = []
+    def handle_starttag(self, tag, attrs):
+        if tag == 'a':
+            self.output_list.append(dict(attrs).get('href'))
   
 # Dummy fetch policy. Returns first element. Does nothing ;)
 class Dummy_Policy:
@@ -24,6 +31,15 @@ class Dummy_Policy:
     def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
         pass
         
+class LIFO_Policy:
+    def getURL(self, c, iteration):
+        if len(c.URLs) == 0:
+            return None
+        else:
+            return c.seedURLs[0]
+            
+    def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
+        pass
     
 #-------------------------------------------------------------------------
 # Data container
@@ -185,9 +201,10 @@ def fetch(c):
         return None 
         
 #-------------------------------------------------------------------------  
-# Remove wrong URL (TODO)
+# Remove wrong URL 
 def removeWrongURL(c):
-    #TODO
+    if c.toFetch in c.URLs:
+        c.URLs.remove(c.toFetch)
     pass
     
 #-------------------------------------------------------------------------  
@@ -196,7 +213,9 @@ def parse(c, page, iteration):
     # data to be saved (DONE)
     htmlData = page.read()
     # obtained URLs (TODO)
-    retrievedURLs = set([])
+    p=Parser()
+    p.feed(str(htmlData))
+    retrievedURLs = set(p.output_list)
     if c.debug:
         print("   Extracted " + str(len(retrievedURLs)) + " links")
 
@@ -208,10 +227,10 @@ def getNormalisedURLs(retrievedURLs):
     return retrievedURLs
     
 #-------------------------------------------------------------------------  
-# Remove duplicates (duplicates) (TODO)
+# Remove duplicates (duplicates)
 def removeDuplicates(c, retrievedURLs):
-    # TODO
-    return retrievedURLs
+    #retrievedURLs -= c.URLs
+    return retrievedURLs - c.URLs
 
 #-------------------------------------------------------------------------  
 # Filter out some URLs (TODO)
