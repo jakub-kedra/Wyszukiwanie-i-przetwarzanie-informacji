@@ -30,26 +30,16 @@ class Dummy_Policy:
             
     def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
         pass
-        
-class LIFOPolicy:
-    def __init__(self, c):
-        # Queue list containing URLs
-        self.queue = c.seedURLs.copy()
-        
+
+class LIFO_Policy:
     def getURL(self, c, iteration):
-        if len(self.queue) == 0:
+        if len(c.URLs) == 0:
             return None
         else:
-            # Return the last element of the queue (LIFO)
-            return self.queue.pop()
-    
+            return c.seedURLs[0]
+            
     def updateURLs(self, c, retrievedURLs, retrievedURLsWD, iteration):
-        # Copy elements of retrievedURLs set into a temporary list
-        tmpList = list(retrievedURLs)
-        # Sort the temporary list in lexicographical order of file names
-        tmpList.sort(key=lambda url: url[len(url) - url[::-1].index('/') :])
-        # Add URLs from the temporary list to the end of the queue
-        self.queue.extend(tmpList)
+        pass
     
 #-------------------------------------------------------------------------
 # Data container
@@ -71,11 +61,11 @@ class Container:
          # Incoming URLs (to <- from; set of incoming links)
         self.incomingURLs = {}
         # Class which maintains a queue of urls to visit. 
-        self.generatePolicy = LIFOPolicy(self)
+        self.generatePolicy = Dummy_Policy()
         # Page (URL) to be fetched next
         self.toFetch = None
         # Number of iterations of a crawler. 
-        self.iterations = 3
+        self.iterations = 10
 
         # If true: store all crawled html pages in the provided directory.
         self.storePages = True
@@ -104,64 +94,62 @@ def main():
     
     # Iterate...
     for iteration in range(c.iterations):
-    
-        if c.debug: 
+
+        if c.debug:
             print("=====================================================")
-            print("Iteration = " + str(iteration + 1) )
+            print("Iteration = " + str(iteration + 1))
             print("=====================================================")
+
         # Prepare a next page to be fetched
         generate(c, iteration)
         if (c.toFetch == None):
             if c.debug:
                 print("   No page to fetch!")
             continue
-                
+
         # Generate: it downloads html page under "toFetch URL"
         page = fetch(c)
-    
+
         if page == None:
             if c.debug:
                 print("   Unexpected error; skipping this page")
             removeWrongURL(c)
             continue
-            
+
         # Parse file
         htmlData, retrievedURLs = parse(c, page, iteration)
-        
+
         # Store pages
         if c.storePages:
             storePage(c, htmlData)
-        
+
         ### normalise retrievedURLs
         retrievedURLs = getNormalisedURLs(retrievedURLs)
-        
+
         ### update outgoing/incoming links
         updateOutgoingURLs(c, retrievedURLs)
         updateIncomingURLs(c, retrievedURLs)
-        
-        ### Filter out some URLs
-        retrievedURLs = getFilteredURLs(c, retrievedURLs)
-        
+
         ### removeDuplicates
         retrievedURLsWD = removeDuplicates(c, retrievedURLs)
-        
+
         ### update urls
         c.generatePolicy.updateURLs(c, retrievedURLs, retrievedURLsWD, iteration)
-        
-        # Add newly obtained URLs to the container   
+
+        # Add newly obtained URLs to the container
         if c.debug:
             print("   Maintained URLs...")
             for url in c.URLs:
                 print("      " + str(url))
-        
+
         if c.debug:
             print("   Newly obtained URLs (duplicates may occur) ...")
             for url in retrievedURLs:
-                    print("      " + str(url))
+                print("      " + str(url))
         if c.debug:
             print("   Newly obtained URLs (without duplicates) ...")
             for url in retrievedURLsWD:
-                    print("      " + str(url))        
+                print("      " + str(url))
         for url in retrievedURLsWD:
             c.URLs.add(url)
 
@@ -223,18 +211,21 @@ def parse(c, page, iteration):
     # data to be saved (DONE)
     htmlData = page.read()
     # obtained URLs (TODO)
-    p=Parser()
+    p = Parser()
     p.feed(str(htmlData))
     retrievedURLs = set(p.output_list)
     if c.debug:
         print("   Extracted " + str(len(retrievedURLs)) + " links")
+
+    # Filter out some URLs
+    retrievedURLs = getFilteredURLs(c, retrievedURLs)
 
     return htmlData, retrievedURLs
 
 #-------------------------------------------------------------------------  
 # Normalise newly obtained links (TODO)
 def getNormalisedURLs(retrievedURLs):
-    return retrievedURLs
+    return {url.lower() for url in retrievedURLs}
     
 #-------------------------------------------------------------------------  
 # Remove duplicates (duplicates)
